@@ -1,25 +1,39 @@
-use pyo3::create_exception;
-use pyo3::exceptions::PyException;
-use pyo3::prelude::*;
+#[macro_use]
+extern crate cpython;
+
+use cpython::{exc, PyErr, PyResult, Python};
 use std::io::prelude::*;
 extern crate keepass;
 
 use keepass::{Database, NodeRef};
 use std::collections::HashMap;
+use std::error;
 use std::fs::File;
 
-create_exception!(pykeepass_rs, IncorrectKey, PyException);
+// create_exception!(pykeepass_rs, IncorrectKey, PyException);
 
-#[pyfunction]
 fn get_all_entries(
+    _py: Python,
     db_path: String,
     password: Option<String>,
-    key_path: Option<String>,
+    keyfile: Option<String>,
 ) -> PyResult<Vec<HashMap<String, String>>> {
+    let res = _get_all_entries(db_path, password, keyfile);
+    match res {
+        Err(e) => Err(PyErr::new::<exc::IOError, _>(_py, e.to_string())),
+        Ok(v) => Ok(v),
+    }
+}
+
+fn _get_all_entries(
+    db_path: String,
+    password: Option<String>,
+    keyfile: Option<String>,
+) -> Result<Vec<HashMap<String, String>>, Box<dyn error::Error>> {
     let _db_path = std::path::Path::new(&db_path);
     let mut f;
     let p;
-    let key_file = match key_path {
+    let key_file = match keyfile {
         None => None,
         Some(k) => {
             p = std::path::Path::new(&k);
@@ -29,12 +43,7 @@ fn get_all_entries(
     };
 
     // Open KeePass database
-    let db = Database::open(&mut File::open(db_path)?, password.as_deref(), key_file);
-    if let Err(e) = db {
-        return Err(IncorrectKey::new_err(e.to_string()));
-    }
-
-    let db = db.unwrap();
+    let db = Database::open(&mut File::open(db_path)?, password.as_deref(), key_file)?;
 
     // Iterate over all Groups and Nodes
 
@@ -70,8 +79,19 @@ fn get_all_entries(
     Ok(ret)
 }
 
-#[pymodule]
-fn pykeepass_rs(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(get_all_entries, m)?)?;
+py_module_initializer!(pykeepass_rs, |py, m| {
+    m.add(py, "__doc__", "This module is implemented in Rust")?;
+    m.add(
+        py,
+        "get_all_entries",
+        py_fn!(
+            py,
+            get_all_entries(
+                db_path: String,
+                password: Option<String>,
+                keyfile: Option<String>
+            )
+        ),
+    )?;
     Ok(())
-}
+});
