@@ -1,0 +1,11 @@
+FROM quay.io/pypa/manylinux2010_x86_64
+RUN curl -L -o maturin.tar.gz https://github.com/PyO3/maturin/releases/download/v0.11.3/maturin-i686-unknown-linux-musl.tar.gz
+RUN tar xvf maturin.tar.gz
+RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
+RUN yum install -y rh-python35-python
+ENV PATH="/root/.cargo/bin:/opt/rh/rh-python35/root/usr/bin/:${PATH}"
+RUN rustup target add x86_64-unknown-linux-musl
+ENV LD_LIBRARY_PATH="/opt/rh/rh-python35/root/usr/lib64:${LD_LIBRARY_PATH}"
+ENV RUSTFLAGS='-C target-cpu=native'
+WORKDIR /io
+ENTRYPOINT ["/maturin"]
