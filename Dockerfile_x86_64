@@ -6,6 +6,6 @@ RUN yum install -y rh-python35-python
 ENV PATH="/root/.cargo/bin:/opt/rh/rh-python35/root/usr/bin/:${PATH}"
 RUN rustup target add x86_64-unknown-linux-musl
 ENV LD_LIBRARY_PATH="/opt/rh/rh-python35/root/usr/lib64:${LD_LIBRARY_PATH}"
-ENV RUSTFLAGS='-C target-cpu=native'
+ENV RUSTFLAGS='-C target-cpu=ivybridge'
 WORKDIR /io
 ENTRYPOINT ["/maturin"]

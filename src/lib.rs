@@ -55,6 +55,9 @@ fn _get_all_entries(
                 group_name = g.name.clone();
             }
             NodeRef::Entry(e) => {
+                //ret.push(e.fields);
+                //should be able to push bytes always?
+
                 let mut entry = HashMap::new();
                 entry.insert(
                     "password".to_string(),
@@ -62,14 +65,14 @@ fn _get_all_entries(
                 );
                 entry.insert(
                     "notes".to_string(),
-                    e.get("notes").unwrap_or("").to_string(),
+                    e.get("Notes").unwrap_or("").to_string(),
                 );
                 entry.insert("title".to_string(), e.get_title().unwrap_or("").to_string());
                 entry.insert(
                     "username".to_string(),
                     e.get_username().unwrap_or("").to_string(),
                 );
-                entry.insert("url".to_string(), e.get("url").unwrap_or("").to_string());
+                entry.insert("url".to_string(), e.get("URL").unwrap_or("").to_string());
                 entry.insert("group".to_string(), group_name.clone());
                 ret.push(entry);
             }
