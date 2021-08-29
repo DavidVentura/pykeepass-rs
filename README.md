@@ -32,7 +32,7 @@ docker run -v ~/git/pykeepass-rs:/io x86 build --release --strip -i python3.5 --
 ARM build:
 
 ```bash
-docker build -t arm -f Dockerfile .
+docker buildx build --platform linux/arm64/v8 -t att2 -f Dockerfile .
 docker run -v ~/git/pykeepass-rs:/io arm build --release --strip -i python3.5
 ```
 

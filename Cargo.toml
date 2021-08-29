@@ -1,6 +1,6 @@
 [package]
 name = "pykeepass-rs"
-version = "0.1.4"
+version = "0.1.5"
 authors = ["david <davidventura27@gmail.com>"]
 edition = "2018"
 
@@ -12,6 +12,12 @@ keepass = "0.4.9"
 [dependencies.cpython]
 version = "0.6"
 features = ["extension-module"]
+
+[dependencies.aes]
+# only here to enable armv8
+# version is the same as the one on keepass' config
+version = "0.7.5"
+features = ["armv8"]
 
 [lib]
 name = "pykeepass_rs"
