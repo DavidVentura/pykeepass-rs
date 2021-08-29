@@ -19,7 +19,7 @@ PyKeepass-rs    0m0,089s
 
 # On my phone
 PyKeepass       0m8.56s
-PyKeepass-rs    0m2.41s
+PyKeepass-rs    0m0.36s
 ```
 
 x86 build:
