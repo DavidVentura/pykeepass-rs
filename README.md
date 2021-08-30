@@ -23,6 +23,13 @@ PyKeepass       0m8.56s
 PyKeepass-rs    0m0.36s
 ```
 
+# Note on PIP
+
+It is **crucial** to upgrade pip or the wheels won't install!  
+Python3.5 was dropped on pip==21, so you have to `pip3 install -U 'pip<21'`
+
+# Building
+
 x86 build:
 
 ```bash
@@ -30,11 +37,17 @@ docker build -t x86 -f Dockerfile_x86_64 .
 docker run -v ~/git/pykeepass-rs:/io x86 build --release --strip -i python3.5 --target x86_64-unknown-linux-musl
 ```
 
-ARM build:
+ARM64 build:
 
 ```bash
 docker buildx build --platform linux/arm64/v8 -t att2 -f Dockerfile .
-docker run -v ~/git/pykeepass-rs:/io arm build --release --strip -i python3.5
+docker run --platform linux/arm64/v8 -v ~/git/pykeepass-rs:/io arm build --release --strip -i python3.5
+```
+
+ARMv7 build:
+
+```bash
+~/maturin build --target armv7-unknown-linux-gnueabihf --release --strip
 ```
 
 
