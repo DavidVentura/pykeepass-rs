@@ -12,24 +12,24 @@ use std::fs::File;
 
 // create_exception!(pykeepass_rs, IncorrectKey, PyException);
 
-fn get_all_entries(
+fn get_all_groups_entries(
     _py: Python,
     db_path: String,
     password: Option<String>,
     keyfile: Option<String>,
-) -> PyResult<Vec<HashMap<String, String>>> {
-    let res = _get_all_entries(db_path, password, keyfile);
+) -> PyResult<(Vec<String>, Vec<HashMap<String, String>>)> {
+    let res = _get_all_groups_entries(db_path, password, keyfile);
     match res {
         Err(e) => Err(PyErr::new::<exc::IOError, _>(_py, e.to_string())),
         Ok(v) => Ok(v),
     }
 }
 
-fn _get_all_entries(
+fn _get_all_groups_entries(
     db_path: String,
     password: Option<String>,
     keyfile: Option<String>,
-) -> Result<Vec<HashMap<String, String>>, Box<dyn error::Error>> {
+) -> Result<(Vec<String>, Vec<HashMap<String, String>>), Box<dyn error::Error>> {
     let _db_path = std::path::Path::new(&db_path);
     let mut f;
     let p;
@@ -48,11 +48,13 @@ fn _get_all_entries(
     // Iterate over all Groups and Nodes
 
     let mut ret = Vec::new();
+    let mut groups = Vec::new();
     let mut group_name: String = "Root".to_string();
     for node in &db.root {
         match node {
             NodeRef::Group(g) => {
                 group_name = g.name.clone();
+                groups.push(group_name.clone());
             }
             NodeRef::Entry(e) => {
                 //ret.push(e.fields);
@@ -79,7 +81,7 @@ fn _get_all_entries(
         }
     }
 
-    Ok(ret)
+    Ok((groups, ret))
 }
 
 py_module_initializer!(pykeepass_rs, |py, m| {
@@ -89,7 +91,7 @@ py_module_initializer!(pykeepass_rs, |py, m| {
         "get_all_entries",
         py_fn!(
             py,
-            get_all_entries(
+            get_all_groups_entries(
                 db_path: String,
                 password: Option<String>,
                 keyfile: Option<String>

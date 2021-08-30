@@ -4,10 +4,11 @@ Read-only interface for keepass databases, as exposed by [keepass-rs](https://gi
 Alternative to `pykeepass` because it is too slow to use on low-end devices (~9s to open my 134 entries database).
 
 
-There is only one function: `get_all_entries`:
+There is only one function: `get_all_groups_entries`:
 ```python
 import pykeepass_rs
-for e in pykeepass_rs.get_all_entries("test.kdbx", password="somePassw0rd", keyfile=None):
+groups, entries = pykeepass_rs.get_all_groups_entries("test.kdbx", password="somePassw0rd", keyfile=None)
+for e in entries
     print(e)
 ```
 
