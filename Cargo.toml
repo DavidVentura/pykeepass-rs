@@ -1,13 +1,13 @@
 [package]
 name = "pykeepass-rs"
-version = "0.1.6"
+version = "0.1.7"
 authors = ["david <davidventura27@gmail.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-keepass = "0.4.9"
+keepass = { git = "https://github.com/davidventura/keepass-rs", "branch" = "next" }
 
 [dependencies.cpython]
 version = "0.6"
