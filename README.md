@@ -52,6 +52,7 @@ docker run --platform linux/arm64/v8 -v ~/git/pykeepass-rs:/io arm build --relea
 ARMv7 build:
 
 ```bash
+export RUSTFLAGS='-C target-feature=+v7,+neon'
 ~/maturin build --target armv7-unknown-linux-gnueabihf --release --strip
 ```
 
