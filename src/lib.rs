@@ -15,7 +15,10 @@ fn get_meta_and_entries(
     db_path: String,
     password: Option<String>,
     keyfile: Option<String>,
-) -> PyResult<(HashMap<String, String>, Vec<HashMap<String, String>>)> {
+) -> PyResult<(
+    HashMap<String, String>,
+    HashMap<String, Vec<HashMap<String, String>>>,
+)> {
     let res = _get_meta_and_entries(_py, db_path, password, keyfile);
     match res {
         Err(e) => Err(PyErr::new::<exc::IOError, _>(_py, e.to_string())),
@@ -49,7 +52,13 @@ fn _get_meta_and_entries(
     db_path: String,
     password: Option<String>,
     keyfile: Option<String>,
-) -> Result<(HashMap<String, String>, Vec<HashMap<String, String>>), Box<dyn error::Error>> {
+) -> Result<
+    (
+        HashMap<String, String>,
+        HashMap<String, Vec<HashMap<String, String>>>,
+    ),
+    Box<dyn error::Error>,
+> {
     let _db_path = std::path::Path::new(&db_path);
     let mut f;
     let p;
@@ -67,17 +76,35 @@ fn _get_meta_and_entries(
 
     // Iterate over all Groups and Nodes
 
-    let mut ret = Vec::new();
     let mut meta = HashMap::new();
-    let mut group_name = Default::default();
-    let mut group_uuid = Default::default();
+    let mut entries = HashMap::new();
+
+    entries.insert(db.root.name.clone(), Vec::new());
 
     meta.insert("recycle_bin_uuid".to_string(), db.meta.recyclebin_uuid);
-    for node in &db.root {
+    flatten_children(
+        db.root.children.iter().map(|n| n.into()).collect(),
+        &mut entries,
+        db.root.name,
+    );
+
+    Ok((meta, entries))
+}
+
+fn flatten_children(
+    nodes: Vec<NodeRef>,
+    group_map: &mut HashMap<String, Vec<HashMap<String, String>>>,
+    group_name: String,
+) -> () {
+    for node in nodes {
         match node {
             NodeRef::Group(g) => {
-                group_name = g.name.clone();
-                group_uuid = g.uuid.clone();
+                group_map.insert(g.name.clone(), Vec::new());
+                flatten_children(
+                    g.children.iter().map(|n| n.into()).collect(),
+                    group_map,
+                    g.name.clone(),
+                );
             }
             NodeRef::Entry(e) => {
                 //should be able to push bytes always?
@@ -97,14 +124,13 @@ fn _get_meta_and_entries(
                     e.get_username().unwrap_or("").to_string(),
                 );
                 entry.insert("url".to_string(), e.get("URL").unwrap_or("").to_string());
-                entry.insert("group_name".to_string(), group_name.clone());
-                entry.insert("group_uuid".to_string(), group_uuid.clone());
-                ret.push(entry);
+                match group_map.get_mut(&group_name) {
+                    Some(items) => items.push(entry),
+                    None => panic!("Could not get any item for group name {}", group_name),
+                }
             }
         }
     }
-
-    Ok((meta, ret))
 }
 
 py_module_initializer!(pykeepass_rs, |py, m| {
