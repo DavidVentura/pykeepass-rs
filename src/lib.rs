@@ -1,12 +1,11 @@
 #[macro_use]
 extern crate cpython;
 
-use cpython::{exc, PyErr, PyResult, PyString, Python, ToPyObject};
+use cpython::{exc, PyClone, PyErr, PyResult, PyString, Python, ToPyObject};
 use std::io::prelude::*;
 extern crate keepass;
 
 use keepass::{Database, NodeRef};
-use std::collections::HashMap;
 use std::error;
 use std::fs::File;
 
@@ -15,11 +14,7 @@ fn get_meta_and_entries(
     db_path: String,
     password: Option<String>,
     keyfile: Option<String>,
-) -> PyResult<(
-    HashMap<String, String>,
-    HashMap<String, HashMap<String, String>>,
-    HashMap<String, Vec<HashMap<String, String>>>,
-)> {
+) -> PyResult<(Meta, Vec<Group>, Vec<Entry>)> {
     let res = _get_meta_and_entries(_py, db_path, password, keyfile);
     match res {
         Err(e) => Err(PyErr::new::<exc::IOError, _>(_py, e.to_string())),
@@ -27,10 +22,47 @@ fn get_meta_and_entries(
     }
 }
 
+py_class!(class Entry |py| {
+    data _group: Group;
+    data _title: String;
+    data _url: String;
+    data _username: String;
+    data _password: String;
+    data _notes: String;
+    @property def group(&self) -> PyResult<Group> {
+        Ok(self._group(py).clone_ref(py))
+    }
+    @property def title(&self) -> PyResult<String> {
+        Ok(self._title(py).clone())
+    }
+    @property def url(&self) -> PyResult<String> {
+        Ok(self._url(py).clone())
+    }
+    @property def username(&self) -> PyResult<String> {
+        Ok(self._username(py).clone())
+    }
+    @property def password(&self) -> PyResult<String> {
+        Ok(self._password(py).clone())
+    }
+    @property def notes(&self) -> PyResult<String> {
+        Ok(self._notes(py).clone())
+    }
+});
+
+py_class!(class Meta |py| {
+    data _recycle_bin_uuid: String;
+    @property def recycle_bin_uuid(&self) -> PyResult<String> {
+        Ok(self._recycle_bin_uuid(py).to_string())
+    }
+    def __str__(&self) -> PyResult<String> {
+        Ok(format!("<Meta {}>", self._recycle_bin_uuid(py)))
+    }
+
+});
+
 py_class!(class Group |py| {
     data _name: String;
     data _uuid: String;
-    //data _entries: HashMap<String, String>;
 
     def __str__(&self) -> PyResult<impl ToPyObject<ObjectType=PyString>> {
         Ok(format!("<Group {}={}>", self._name(py), self._uuid(py)))
@@ -45,7 +77,6 @@ py_class!(class Group |py| {
         Ok(self._name(py).to_string())
     }
 
-
 });
 
 fn _get_meta_and_entries(
@@ -53,14 +84,7 @@ fn _get_meta_and_entries(
     db_path: String,
     password: Option<String>,
     keyfile: Option<String>,
-) -> Result<
-    (
-        HashMap<String, String>,
-        HashMap<String, HashMap<String, String>>,
-        HashMap<String, Vec<HashMap<String, String>>>,
-    ),
-    Box<dyn error::Error>,
-> {
+) -> Result<(Meta, Vec<Group>, Vec<Entry>), Box<dyn error::Error>> {
     let _db_path = std::path::Path::new(&db_path);
     let mut f;
     let p;
@@ -78,85 +102,67 @@ fn _get_meta_and_entries(
 
     // Iterate over all Groups and Nodes
 
-    let mut meta = HashMap::new();
-    let mut entries = HashMap::new();
-    let mut groups = HashMap::new();
+    let meta = Meta::create_instance(_py, db.meta.recyclebin_uuid.clone()).unwrap();
+    let mut entries = Vec::new();
+    let mut groups = Vec::new();
 
-    entries.insert(db.root.uuid.clone(), Vec::new());
-
-    meta.insert("recycle_bin_uuid".to_string(), db.meta.recyclebin_uuid);
+    let root_group =
+        Group::create_instance(_py, db.root.name.clone(), db.root.uuid.clone()).unwrap();
     flatten_children(
+        _py,
         db.root.children.iter().map(|n| n.into()).collect(),
         &mut entries,
-        db.root.uuid.clone(),
+        root_group,
     );
 
+    let obj = Group::create_instance(_py, db.root.name, db.root.uuid).unwrap();
+    groups.push(obj);
+
     flatten_groups(
+        _py,
         db.root.children.iter().map(|n| n.into()).collect(),
         &mut groups,
     );
-    let mut entry = HashMap::new();
-    entry.insert("name".to_string(), db.root.name.clone());
-    entry.insert("uuid".to_string(), db.root.uuid.clone());
-    groups.insert(db.root.uuid.clone(), entry);
 
     Ok((meta, groups, entries))
 }
 
-fn flatten_groups(
-    nodes: Vec<NodeRef>,
-    group_map: &mut HashMap<String, HashMap<String, String>>,
-) -> () {
+fn flatten_groups(py: Python, nodes: Vec<NodeRef>, group_map: &mut Vec<Group>) -> () {
     for node in nodes {
         match node {
             NodeRef::Group(g) => {
-                let mut entry = HashMap::new();
-                entry.insert("name".to_string(), g.name.clone());
-                entry.insert("uuid".to_string(), g.uuid.clone());
-                group_map.insert(g.uuid.clone(), entry);
-                flatten_groups(g.children.iter().map(|n| n.into()).collect(), group_map);
+                let obj = Group::create_instance(py, g.name.clone(), g.uuid.clone()).unwrap();
+                group_map.push(obj);
+                flatten_groups(py, g.children.iter().map(|n| n.into()).collect(), group_map);
             }
             _ => {}
         }
     }
 }
-fn flatten_children(
-    nodes: Vec<NodeRef>,
-    group_map: &mut HashMap<String, Vec<HashMap<String, String>>>,
-    group_uuid: String,
-) -> () {
+fn flatten_children(py: Python, nodes: Vec<NodeRef>, entries: &mut Vec<Entry>, group: Group) -> () {
     for node in nodes {
         match node {
             NodeRef::Group(g) => {
-                group_map.insert(g.uuid.clone(), Vec::new());
+                let _g = Group::create_instance(py, g.name.clone(), g.uuid.clone()).unwrap();
                 flatten_children(
+                    py,
                     g.children.iter().map(|n| n.into()).collect(),
-                    group_map,
-                    g.uuid.clone(),
+                    entries,
+                    _g,
                 );
             }
             NodeRef::Entry(e) => {
-                //should be able to push bytes always?
-
-                let mut entry = HashMap::new();
-                entry.insert(
-                    "password".to_string(),
-                    e.get_password().unwrap_or("").to_string(),
-                );
-                entry.insert(
-                    "notes".to_string(),
-                    e.get("Notes").unwrap_or("").to_string(),
-                );
-                entry.insert("title".to_string(), e.get_title().unwrap_or("").to_string());
-                entry.insert(
-                    "username".to_string(),
+                let _e = Entry::create_instance(
+                    py,
+                    group.clone_ref(py),
+                    e.get_title().unwrap_or("").to_string(),
+                    e.get("URL").unwrap_or("").to_string(),
                     e.get_username().unwrap_or("").to_string(),
-                );
-                entry.insert("url".to_string(), e.get("URL").unwrap_or("").to_string());
-                match group_map.get_mut(&group_uuid) {
-                    Some(items) => items.push(entry),
-                    None => panic!("Could not get any item for group name {}", group_uuid),
-                }
+                    e.get_password().unwrap_or("").to_string(),
+                    e.get("Notes").unwrap_or("").to_string(),
+                )
+                .unwrap();
+                entries.push(_e);
             }
         }
     }
