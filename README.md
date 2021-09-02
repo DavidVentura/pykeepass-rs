@@ -11,12 +11,11 @@ If you want this to be _fast_ on ARMv7 (armhf) you must use kdbx3 (version 3, no
 There is only one function: `get_all_groups_entries`:
 ```python
 import pykeepass_rs
-meta, groups, grouped_entries = pykeepass_rs.get_meta_and_entries("test.kdbx", password="somePassw0rd", keyfile=None)
+meta, groups, entries = pykeepass_rs.get_meta_and_entries("test.kdbx", password="somePassw0rd", keyfile=None)
 
-for group, entries in grouped_entries.items():
-    print('#' * 20, groups[group])
+for entry in entries:
     for e in entries
-        print(e)
+        print(e.title, e.url)
 ```
 
 Speed comparison on 150 entries:
