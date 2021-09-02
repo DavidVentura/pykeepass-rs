@@ -11,10 +11,12 @@ If you want this to be _fast_ on ARMv7 (armhf) you must use kdbx3 (version 3, no
 There is only one function: `get_all_groups_entries`:
 ```python
 import pykeepass_rs
-meta, entries = pykeepass_rs.get_meta_and_entries("test.kdbx", password="somePassw0rd", keyfile=None)
-for e in entries
-    print(e)
+meta, groups, grouped_entries = pykeepass_rs.get_meta_and_entries("test.kdbx", password="somePassw0rd", keyfile=None)
 
+for group, entries in grouped_entries.items():
+    print('#' * 20, groups[group])
+    for e in entries
+        print(e)
 ```
 
 Speed comparison on 150 entries:
@@ -46,7 +48,7 @@ ARM64 build:
 
 ```bash
 docker buildx build --platform linux/arm64/v8 -t att2 -f Dockerfile .
-docker run --platform linux/arm64/v8 -v ~/git/pykeepass-rs:/io arm build --release --strip -i python3.5
+docker run --platform linux/arm64/v8 -v ~/git/pykeepass-rs:/io att2 build --release --strip -i python3.5
 ```
 
 ARMv7 build:
@@ -59,5 +61,6 @@ docker run --env RUSTFLAGS='-C target-feature=+v7,+neon -C linker=armv7-unknown-
 
 Release
 ```bash
+unset DBUS_SESSION_BUS_ADDRESS
 twine upload target/wheels/*
 ```

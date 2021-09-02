@@ -17,6 +17,7 @@ fn get_meta_and_entries(
     keyfile: Option<String>,
 ) -> PyResult<(
     HashMap<String, String>,
+    HashMap<String, HashMap<String, String>>,
     HashMap<String, Vec<HashMap<String, String>>>,
 )> {
     let res = _get_meta_and_entries(_py, db_path, password, keyfile);
@@ -55,6 +56,7 @@ fn _get_meta_and_entries(
 ) -> Result<
     (
         HashMap<String, String>,
+        HashMap<String, HashMap<String, String>>,
         HashMap<String, Vec<HashMap<String, String>>>,
     ),
     Box<dyn error::Error>,
@@ -78,32 +80,59 @@ fn _get_meta_and_entries(
 
     let mut meta = HashMap::new();
     let mut entries = HashMap::new();
+    let mut groups = HashMap::new();
 
-    entries.insert(db.root.name.clone(), Vec::new());
+    entries.insert(db.root.uuid.clone(), Vec::new());
 
     meta.insert("recycle_bin_uuid".to_string(), db.meta.recyclebin_uuid);
     flatten_children(
         db.root.children.iter().map(|n| n.into()).collect(),
         &mut entries,
-        db.root.name,
+        db.root.uuid.clone(),
     );
 
-    Ok((meta, entries))
+    flatten_groups(
+        db.root.children.iter().map(|n| n.into()).collect(),
+        &mut groups,
+    );
+    let mut entry = HashMap::new();
+    entry.insert("name".to_string(), db.root.name.clone());
+    entry.insert("uuid".to_string(), db.root.uuid.clone());
+    groups.insert(db.root.uuid.clone(), entry);
+
+    Ok((meta, groups, entries))
 }
 
-fn flatten_children(
+fn flatten_groups(
     nodes: Vec<NodeRef>,
-    group_map: &mut HashMap<String, Vec<HashMap<String, String>>>,
-    group_name: String,
+    group_map: &mut HashMap<String, HashMap<String, String>>,
 ) -> () {
     for node in nodes {
         match node {
             NodeRef::Group(g) => {
-                group_map.insert(g.name.clone(), Vec::new());
+                let mut entry = HashMap::new();
+                entry.insert("name".to_string(), g.name.clone());
+                entry.insert("uuid".to_string(), g.uuid.clone());
+                group_map.insert(g.uuid.clone(), entry);
+                flatten_groups(g.children.iter().map(|n| n.into()).collect(), group_map);
+            }
+            _ => {}
+        }
+    }
+}
+fn flatten_children(
+    nodes: Vec<NodeRef>,
+    group_map: &mut HashMap<String, Vec<HashMap<String, String>>>,
+    group_uuid: String,
+) -> () {
+    for node in nodes {
+        match node {
+            NodeRef::Group(g) => {
+                group_map.insert(g.uuid.clone(), Vec::new());
                 flatten_children(
                     g.children.iter().map(|n| n.into()).collect(),
                     group_map,
-                    g.name.clone(),
+                    g.uuid.clone(),
                 );
             }
             NodeRef::Entry(e) => {
@@ -124,9 +153,9 @@ fn flatten_children(
                     e.get_username().unwrap_or("").to_string(),
                 );
                 entry.insert("url".to_string(), e.get("URL").unwrap_or("").to_string());
-                match group_map.get_mut(&group_name) {
+                match group_map.get_mut(&group_uuid) {
                     Some(items) => items.push(entry),
-                    None => panic!("Could not get any item for group name {}", group_name),
+                    None => panic!("Could not get any item for group name {}", group_uuid),
                 }
             }
         }
