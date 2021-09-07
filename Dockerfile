@@ -7,7 +7,7 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 RUN rustup toolchain install nightly
 RUN rustup default nightly
 # https://docs.rs/aes/0.7.5/aes/
-ENV RUSTFLAGS='-C target-feature=+aes'
+ENV RUSTFLAGS='-C target-feature=+aes -C link-arg=-s'
 RUN cargo search --limit 0
 WORKDIR /io
 ENTRYPOINT ["/maturin"]

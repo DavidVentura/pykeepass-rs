@@ -40,7 +40,7 @@ x86 build:
 
 ```bash
 docker build -t x86 -f Dockerfile_x86_64 .
-docker run --env RUSTFLAGS='-C target-cpu=ivybridge' -v ~/git/pykeepass-rs:/io x86 build --release --strip -i python3.5 --target x86_64-unknown-linux-musl
+docker run --env RUSTFLAGS='-C target-cpu=ivybridge -C link-arg=-s' -v ~/git/pykeepass-rs:/io x86 build --release --strip -i python3.5 --target x86_64-unknown-linux-musl
 ```
 
 ARM64 build:
@@ -54,7 +54,11 @@ ARMv7 build:
 
 ```bash
 docker build -t arm -f Dockerfile_arm .
-docker run --env RUSTFLAGS='-C target-feature=+v7,+neon -C linker=armv7-unknown-linux-gnueabihf-gcc' -v ~/git/pykeepass-rs:/io arm build --release --strip -i python3.5 --target armv7-unknown-linux-musleabihf
+docker run --env RUSTFLAGS='-C target-feature=+v7,+neon -C linker=armv7-unknown-linux-gnueabihf-gcc -C link-arg=-s' \
+	-v ~/git/pykeepass-rs:/io arm \
+	build --release --strip -i python3.5 --target armv7-unknown-linux-musleabihf
+# currently the .so in the wheel has incorrect name https://github.com/PyO3/maturin/issues/620
+bash whack_armv7.sh
 ```
 
 

@@ -22,6 +22,24 @@ fn get_meta_and_entries(
     }
 }
 
+fn version(_py: Python, db_path: String) -> PyResult<u16> {
+    let res = _version(db_path);
+    match res {
+        Err(e) => Err(PyErr::new::<exc::IOError, _>(_py, e.to_string())),
+        Ok(v) => Ok(v),
+    }
+}
+
+fn _version(db_path: String) -> Result<u16, Box<dyn error::Error>> {
+    let mut data = Vec::new();
+    let mut source = File::open(db_path)?;
+    source.read_to_end(&mut data)?;
+
+    let (_version, file_major_version, _file_minor_version) =
+        keepass::parse::get_kdbx_version(data.as_ref())?;
+    Ok(file_major_version)
+}
+
 py_class!(class Entry |py| {
     data _group: Group;
     data _title: String;
@@ -182,5 +200,6 @@ py_module_initializer!(pykeepass_rs, |py, m| {
             )
         ),
     )?;
+    m.add(py, "get_db_version", py_fn!(py, version(db_path: String,)))?;
     Ok(())
 });
