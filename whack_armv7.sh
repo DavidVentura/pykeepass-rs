@@ -7,5 +7,5 @@ wheel_path=$here/target/wheels/pykeepass_rs-$version-cp35-cp35m-manylinux_2_17_a
 unzip "$wheel_path" -d $tmp
 cd $tmp
 mv pykeepass_rs/pykeepass_rs.cpython-35m-x86_64-linux-gnu.so pykeepass_rs/pykeepass_rs.cpython-35m-arm-linux-gnueabihf.so
-sudo rm -i "$wheel_path"
+sudo rm -f "$wheel_path"
 sudo zip -r "$wheel_path" .

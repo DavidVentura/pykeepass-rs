@@ -65,5 +65,6 @@ bash whack_armv7.sh
 Release
 ```bash
 unset DBUS_SESSION_BUS_ADDRESS
-twine upload target/wheels/*
+version=$(grep version Cargo.toml | head -1 | cut -d'"' -f2)
+twine upload target/wheels/*$version*
 ```
