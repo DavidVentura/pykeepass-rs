@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 keepass = { git = "https://github.com/davidventura/keepass-rs", "branch" = "next" }
+#keepass = { path = "../keepass-rs" }
 
 [dependencies.cpython]
 version = "0.6"
