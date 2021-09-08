@@ -240,7 +240,6 @@ dependencies = [
 [[package]]
 name = "keepass"
 version = "0.4.9"
-source = "git+https://github.com/davidventura/keepass-rs?branch=next#5d1ecc41c241c85c079dfeb412827a0bcabfd55f"
 dependencies = [
  "aes",
  "base64",
