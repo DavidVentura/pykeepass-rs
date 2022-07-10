@@ -3,8 +3,6 @@
 Read-only interface for keepass databases, as exposed by [keepass-rs](https://github.com/sseemayer/keepass-rs).
 Alternative to `pykeepass` because it is too slow to use on low-end devices (~9s to open my 134 entries database).
 
-If you want this to be _fast_ on ARMv7 (armhf) you must use kdbx3 (version 3, not 4). Not sure why yet.
-
 **This library is very alpha. I expect to break the interface constantly**
 
 
