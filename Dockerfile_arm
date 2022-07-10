@@ -1,65 +1,80 @@
-FROM ubuntu:20.04 AS toolchain
-
-ENV DEBIAN_FRONTEND noninteractive
-
-RUN apt-get update && \
-    apt-get install --no-install-recommends -y \
-    automake \
-    bison \
-    bzip2 \
-    ca-certificates \
-    cmake \
-    curl \
-    file \
-    flex \
-    g++ \
-    gawk \
-    gdb \
-    git \
-    gperf \
-    help2man \
-    libncurses-dev \
-    libssl-dev \
-    libtool-bin \
-    make \
-    ninja-build \
-    patch \
-    pkg-config \
-    python3 \
-    sudo \
-    texinfo \
-    unzip \
-    wget \
-    xz-utils \
-    libssl-dev \
-    libffi-dev
-
-# Install crosstool-ng
-RUN curl -Lf https://github.com/crosstool-ng/crosstool-ng/archive/master.tar.gz | tar xzf - && \
-    cd crosstool-ng-master && \
-    ./bootstrap && \
-    ./configure --prefix=/usr/local && \
-    make -j4 && \
-    make install && \
-    cd .. && rm -rf crosstool-ng-master
-
-COPY .config /tmp/toolchain.config
-
-# Build cross compiler
-RUN mkdir build && \
-    cd build && \
-    cp /tmp/toolchain.config .config && \
-    export CT_ALLOW_BUILD_AS_ROOT_SURE=1 && \
-    ct-ng build.2 && \
-    cd .. && \
-    rm -rf build
+#FROM ubuntu:20.04 AS toolchain
+#
+#ENV DEBIAN_FRONTEND noninteractive
+#
+#RUN apt-get update && \
+#    apt-get install --no-install-recommends -y \
+#    automake \
+#    bison \
+#    bzip2 \
+#    ca-certificates \
+#    cmake \
+#    curl \
+#    file \
+#    flex \
+#    g++ \
+#    gawk \
+#    gdb \
+#    git \
+#    gperf \
+#    help2man \
+#    libncurses-dev \
+#    libssl-dev \
+#    libtool-bin \
+#    make \
+#    ninja-build \
+#    patch \
+#    pkg-config \
+#    python3 \
+#    sudo \
+#    texinfo \
+#    unzip \
+#    wget \
+#    xz-utils \
+#    libssl-dev \
+#    libffi-dev
+#
+## Install crosstool-ng
+#RUN curl -Lf https://github.com/crosstool-ng/crosstool-ng/archive/master.tar.gz | tar xzf - && \
+#    cd crosstool-ng-master && \
+#    ./bootstrap && \
+#    ./configure --prefix=/usr/local && \
+#    make -j4 && \
+#    make install && \
+#    cd .. && rm -rf crosstool-ng-master
+#
+#COPY .config /tmp/toolchain.config
+#
+## Build cross compiler
+#RUN mkdir build && \
+#    cd build && \
+#    cp /tmp/toolchain.config .config && \
+#    export CT_ALLOW_BUILD_AS_ROOT_SURE=1 && \
+#    ct-ng build.2 && \
+#    cd .. && \
+#    rm -rf build
 
 FROM ubuntu:20.04
 
-# Copy cross toolchain
-COPY --from=toolchain /usr/armv7-unknown-linux-gnueabihf /usr/armv7-unknown-linux-gnueabihf
-
 ENV DEBIAN_FRONTEND noninteractive
+RUN apt-get update && \
+    apt-get install --no-install-recommends -y \
+    curl \
+    git \
+    g++ \
+    make \
+    sudo \
+    wget \
+    software-properties-common \
+    llvm-dev \
+    libclang-dev \
+    clang
+
+# Copy cross toolchain
+#COPY --from=toolchain /usr/armv7-unknown-linux-gnueabihf /usr/armv7-unknown-linux-gnueabihf
+ADD armv7-unknown-linux-gnueabihf.tar.gz /usr/
+RUN ls /usr/armv7-unknown-linux-gnueabihf/bin
+
 ENV PATH=$PATH:/usr/armv7-unknown-linux-gnueabihf/bin
 
 ENV CC_armv7_unknown_linux_gnueabihf=armv7-unknown-linux-gnueabihf-gcc \
@@ -76,23 +91,10 @@ ENV TARGET_CC=armv7-unknown-linux-gnueabihf-gcc \
 ENV CARGO_BUILD_TARGET=armv7-unknown-linux-gnueabihf
 ENV CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER=armv7-unknown-linux-gnueabihf-gcc
 
-RUN apt-get update && \
-    apt-get install --no-install-recommends -y \
-    curl \
-    git \
-    g++ \
-    make \
-    sudo \
-    wget \
-    software-properties-common \
-    llvm-dev \
-    libclang-dev \
-    clang
-
 # Target openssl & libffi
 RUN export CC=$TARGET_CC && \
     echo "Building zlib" && \
-    VERS=1.2.11 && \
+    VERS=1.2.12 && \
     cd /tmp && \
     curl -sqLO https://zlib.net/zlib-$VERS.tar.gz && \
     tar xzf zlib-$VERS.tar.gz && cd zlib-$VERS && \
@@ -151,6 +153,7 @@ RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 RUN rustup target add armv7-unknown-linux-musleabihf
 RUN cargo search --limit 0
+RUN apt-get install patchelf
 
 WORKDIR /io
 ENTRYPOINT ["maturin"]

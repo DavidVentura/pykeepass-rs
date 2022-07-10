@@ -66,3 +66,13 @@ unset DBUS_SESSION_BUS_ADDRESS
 version=$(grep version Cargo.toml | head -1 | cut -d'"' -f2)
 twine upload target/wheels/*$version*
 ```
+# Issues
+
+If you get 
+```
+#0 0.173 standard_init_linux.go:228: exec user process caused: exec format error
+```
+you need qemu-user-static:
+```
+sudo apt install -y qemu-user-static binfmt-support
+```
