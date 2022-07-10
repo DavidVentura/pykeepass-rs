@@ -10,8 +10,8 @@ docker run --env RUSTFLAGS='-C target-feature=+v7,+neon -C linker=armv7-unknown-
 bash whack_armv7.sh
 
 echo 'Building AArch64'
-docker buildx build --platform linux/arm64/v8 -t att2 -f Dockerfile .
-docker run --platform linux/arm64/v8 -v ~/git/pykeepass-rs:/io att2 build --release --strip -i python3.5
+(cd aarch64 && docker build -t cross-aarch64 .)
+docker run -v ~/git/pykeepass-rs:/io --workdir /io cross-aarch64 build --release --strip -i python3.5 --target aarch64-unknown-linux-gnu --manylinux 2014
 
 echo 'Building x86'
 docker build -t x86 -f Dockerfile_x86_64 .
