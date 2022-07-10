@@ -40,6 +40,24 @@ fn _version(db_path: String) -> Result<u16, Box<dyn error::Error>> {
     Ok(file_major_version)
 }
 
+py_class!(class TOTP |py| {
+    data _code: String;
+    data _valid_for: u64;
+    data _period: u64;
+
+    @property def code(&self) -> PyResult<String> {
+        Ok(self._code(py).clone())
+    }
+
+    @property def valid_for(&self) -> PyResult<u64> {
+        Ok(self._valid_for(py).clone())
+    }
+
+    @property def period(&self) -> PyResult<u64> {
+        Ok(self._period(py).clone())
+    }
+});
+
 py_class!(class Entry |py| {
     data _group: Group;
     data _title: String;
@@ -47,6 +65,7 @@ py_class!(class Entry |py| {
     data _username: String;
     data _password: String;
     data _notes: String;
+    data _totp: Option<TOTP>;
     @property def group(&self) -> PyResult<Group> {
         Ok(self._group(py).clone_ref(py))
     }
@@ -64,6 +83,10 @@ py_class!(class Entry |py| {
     }
     @property def notes(&self) -> PyResult<String> {
         Ok(self._notes(py).clone())
+    }
+    @property def totp(&self) -> PyResult<Option<TOTP>> {
+        let t = self._totp(py).clone_ref(py);
+        Ok(t)
     }
 });
 
@@ -170,6 +193,21 @@ fn flatten_children(py: Python, nodes: Vec<NodeRef>, entries: &mut Vec<Entry>, g
                 );
             }
             NodeRef::Entry(e) => {
+                let otp = if let Some(t) = e.get_otp() {
+                    let cur = t.current_value();
+                    Some(
+                        TOTP::create_instance(
+                            py,
+                            cur.code,
+                            cur.valid_for.as_secs(),
+                            cur.period.as_secs(),
+                        )
+                        .unwrap(),
+                    )
+                } else {
+                    None
+                };
+
                 let _e = Entry::create_instance(
                     py,
                     group.clone_ref(py),
@@ -178,6 +216,7 @@ fn flatten_children(py: Python, nodes: Vec<NodeRef>, entries: &mut Vec<Entry>, g
                     e.get_username().unwrap_or("").to_string(),
                     e.get_password().unwrap_or("").to_string(),
                     e.get("Notes").unwrap_or("").to_string(),
+                    otp,
                 )
                 .unwrap();
                 entries.push(_e);

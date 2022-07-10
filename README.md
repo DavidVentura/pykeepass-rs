@@ -12,7 +12,7 @@ import pykeepass_rs
 meta, groups, entries = pykeepass_rs.get_meta_and_entries("test.kdbx", password="somePassw0rd", keyfile=None)
 
 for entry in entries:
-    for e in entries
+    for e in entries:
         print(e.title, e.url)
 ```
 
