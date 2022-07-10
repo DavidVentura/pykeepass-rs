@@ -2,10 +2,11 @@
 extern crate cpython;
 
 use cpython::{exc, PyClone, PyErr, PyResult, PyString, Python, ToPyObject};
+use std::cell::RefCell;
 use std::io::prelude::*;
 extern crate keepass;
 
-use keepass::{Database, NodeRef};
+use keepass::{otp, Database, NodeRef};
 use std::error;
 use std::fs::File;
 
@@ -65,7 +66,7 @@ py_class!(class Entry |py| {
     data _username: String;
     data _password: String;
     data _notes: String;
-    data _totp: Option<TOTP>;
+    data _totp: Option<RefCell<otp::TOTP>>;
     @property def group(&self) -> PyResult<Group> {
         Ok(self._group(py).clone_ref(py))
     }
@@ -84,9 +85,13 @@ py_class!(class Entry |py| {
     @property def notes(&self) -> PyResult<String> {
         Ok(self._notes(py).clone())
     }
-    @property def totp(&self) -> PyResult<Option<TOTP>> {
-        let t = self._totp(py).clone_ref(py);
-        Ok(t)
+    def totp(&self) -> PyResult<Option<TOTP>> {
+        if self._totp(py).is_none() {
+            return Ok(None);
+        }
+        let t = self._totp(py).as_ref().unwrap();
+        let q = t.borrow().current_value();
+        Ok(Some(TOTP::create_instance(py, q.code, q.valid_for.as_secs(), q.period.as_secs()).unwrap()))
     }
 });
 
@@ -193,21 +198,11 @@ fn flatten_children(py: Python, nodes: Vec<NodeRef>, entries: &mut Vec<Entry>, g
                 );
             }
             NodeRef::Entry(e) => {
-                let otp = if let Some(t) = e.get_otp() {
-                    let cur = t.current_value();
-                    Some(
-                        TOTP::create_instance(
-                            py,
-                            cur.code,
-                            cur.valid_for.as_secs(),
-                            cur.period.as_secs(),
-                        )
-                        .unwrap(),
-                    )
+                let otp = if let Some(o) = e.get_otp() {
+                    Some(RefCell::new(o))
                 } else {
                     None
                 };
-
                 let _e = Entry::create_instance(
                     py,
                     group.clone_ref(py),
