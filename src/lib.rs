@@ -66,6 +66,7 @@ py_class!(class Entry |py| {
     data _username: String;
     data _password: String;
     data _notes: String;
+    data _uuid: String;
     data _totp: Option<RefCell<otp::TOTP>>;
     @property def group(&self) -> PyResult<Group> {
         Ok(self._group(py).clone_ref(py))
@@ -84,6 +85,9 @@ py_class!(class Entry |py| {
     }
     @property def notes(&self) -> PyResult<String> {
         Ok(self._notes(py).clone())
+    }
+    @property def uuid(&self) -> PyResult<String> {
+        Ok(self._uuid(py).clone())
     }
     def totp(&self) -> PyResult<Option<TOTP>> {
         if self._totp(py).is_none() {
@@ -211,6 +215,7 @@ fn flatten_children(py: Python, nodes: Vec<NodeRef>, entries: &mut Vec<Entry>, g
                     e.get_username().unwrap_or("").to_string(),
                     e.get_password().unwrap_or("").to_string(),
                     e.get("Notes").unwrap_or("").to_string(),
+                    e.uuid.clone(),
                     otp,
                 )
                 .unwrap();
