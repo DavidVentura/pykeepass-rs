@@ -5,7 +5,7 @@ echo 'Building armhf'
 docker build -t arm -f Dockerfile_arm .
 docker run --env RUSTFLAGS='-C target-feature=+v7,+neon -C linker=armv7-unknown-linux-gnueabihf-gcc -C link-arg=-s' \
 	-v ~/git/pykeepass-rs:/io arm \
-	build --release --strip -i python3.5 --target armv7-unknown-linux-musleabihf \
+	build --release --strip -i python3.8 --target armv7-unknown-linux-musleabihf \
 	--manylinux 2014
 bash whack_armv7.sh
 

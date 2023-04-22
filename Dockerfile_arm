@@ -94,11 +94,12 @@ ENV CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER=armv7-unknown-linux-gnueab
 # Target openssl & libffi
 RUN export CC=$TARGET_CC && \
     echo "Building zlib" && \
-    VERS=1.2.12 && \
+    VERS=1.2.13 && \
     cd /tmp && \
+	echo "asd" && \
     curl -sqLO https://zlib.net/zlib-$VERS.tar.gz && \
     tar xzf zlib-$VERS.tar.gz && cd zlib-$VERS && \
-    ./configure --archs="-fPIC" --prefix=/usr/armv7-unknown-linux-gnueabihf/ || tail -n 500 configure.log && \
+    ./configure --archs="-fPIC" --prefix=/usr/armv7-unknown-linux-gnueabihf/ && \
     make -j4 && make -j4 install && \
     cd .. && rm -rf zlib-$VERS.tar.gz zlib-$VERS && \
     echo "Building OpenSSL" && \
@@ -125,13 +126,14 @@ ENV OPENSSL_DIR=/usr/armv7-unknown-linux-gnueabihf \
 RUN add-apt-repository ppa:deadsnakes/ppa && \
     apt-get update && \
     apt-get install -y \
-    python3.5 python3.5-venv \
+    python3.8 python3.8-venv \
     python3 python3-pip python3-venv python-is-python3
 
 RUN mkdir -p /opt/python
+RUN python3.8 --version
 
 RUN cd /tmp && \
-    VERS=3.5.10 && PREFIX=/opt/python/cp35-cp35m && \
+    VERS=3.8.10 && PREFIX=/opt/python/cp35-cp35m && \
     curl -LO https://www.python.org/ftp/python/$VERS/Python-$VERS.tgz && \
     tar xzf Python-$VERS.tgz && cd Python-$VERS && \
     ./configure CC=$TARGET_CC AR=$TARGET_AR READELF=$TARGET_READELF --host=armv7l-unknown-linux-gnueabihf --target=armv7l-unknown-linux-gnueabihf --prefix=$PREFIX --disable-shared --with-ensurepip=no --with-openssl=$OPENSSL_DIR --build=$(uname -m)-linux-gnu --disable-ipv6 ac_cv_have_long_long_format=yes ac_cv_file__dev_ptmx=no ac_cv_file__dev_ptc=no && \
@@ -147,7 +149,7 @@ RUN cd /tmp && \
 
 RUN python3 -m pip install --no-cache-dir auditwheel build && \
     python3 -m pip install --no-cache-dir maturin auditwheel-symbols && \
-    python3.5 -m pip install wheel
+    python3.8 -m pip install wheel
 
 RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
